@@ -20,6 +20,7 @@ class Graphic():
         self.last_n_values = np.ones(_sensors_count)
         self.mean_values = []
         self.std = []
+        self.reseted = False
 
     def update_list(self,sensor,value):
         self.sensors_values[sensor].append(value)
@@ -53,10 +54,24 @@ class Graphic():
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
     
-    def save_data(self):
+    def save_data(self,name=None):
         now = datetime.now().strftime("%Y-%m-%d_%H-%M")
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.sensors_values['dateTime'] = self.sensor_timestamp
         df = pd.DataFrame(self.sensors_values)
-        df.to_csv(os.path.join(root,f'{now}.csv'),sep=';',index=False)
-        self.fig.savefig(os.path.join(root,f'{now}.svg'),format='svg')
+        name = name if name else now
+        df.to_csv(os.path.join(root,f'{name}.csv'),sep=';',index=False)
+        self.fig.savefig(os.path.join(root,f'{name}.svg'),format='svg')
+
+    def reset(self):
+        self.sensor_timestamp = []
+        self.sensors_values = {f'S{i}' : [] for i in range(_sensors_count)}
+        self.marker_point = np.ones(_sensors_count)*-1
+        self.mean_value = None
+        self.last_n_values = np.ones(_sensors_count)
+        self.mean_values = []
+        self.std = []
+        self.reseted = True
+        for s,ax in enumerate(self.ax):
+            ax.clear()
+        self.fig.canvas.flush_events()

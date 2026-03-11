@@ -49,6 +49,12 @@ class DerivativeControl():
         self.actual_step = 0
         self.last_value_intensity = None
         self.last_value = None
+    
+    def reset(self):
+        self.stationary = False
+        self.actual_step = 0
+        self.last_value_intensity = None
+        self.last_value = None
 
     def check_status(self, value):
         if self.stationary:

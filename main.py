@@ -5,6 +5,7 @@ from test_control import HeuristicTestControl,DerivativeControl,StandardDeviatio
 import serial
 
 from serial.tools.list_ports import comports
+from reset_dialog import SaveWindow
 
 def list_serial_ports():
     ports = serial.tools.list_ports.comports()
@@ -42,6 +43,7 @@ def run(frame):
         if conn.in_waiting > 0:
             line = conn.readline().decode('utf-8').strip()
             values = line.split(',')
+            print(line)
             for i, item in enumerate(values):
                 try:
                     sensor, value = item.split(':')
@@ -51,8 +53,17 @@ def run(frame):
                     if should_update:
                         marks.append(i)
                     graphic.update_list(sensor,value)
+                    graphic.reseted = False
                 except Exception as ex:
-                    return
+                    if not graphic.reseted:
+                        window = SaveWindow()
+                        if window.name:
+                            graphic.save_data(window.name)
+                        for t in test_control.keys():
+                            test_control[t].reset()
+                        graphic.reset()
+                        conn.reset_input_buffer()
+                        return
             graphic.update_graphic(marks,any_update)
                     
     except Exception as ex:
@@ -71,4 +82,7 @@ test_control = {f'S{i}':DerivativeControl() for i in range(n_sensors)}
 graphic = Graphic()
 anim = FuncAnimation(graphic.fig,run,cache_frame_data=False)
 plt.show()
-graphic.save_data()
+if not graphic.reseted:
+    window = SaveWindow()
+    if window.name:
+        graphic.save_data(window.name)
