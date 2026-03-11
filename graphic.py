@@ -4,7 +4,7 @@ import numpy as np
 from datetime import datetime
 import os
 
-_sensors_count = 2
+_sensors_count = 5
 
 class Graphic():
     def __init__(self):
@@ -17,10 +17,13 @@ class Graphic():
         self.marker_point = np.ones(_sensors_count)*-1
         self.colors = ['forestgreen','brown','dodgerblue','darkorange','darkviolet']
         self.mean_value = None
+        self.last_n_values = np.ones(_sensors_count)
         self.mean_values = []
+        self.std = []
 
     def update_list(self,sensor,value):
         self.sensors_values[sensor].append(value)
+        self.last_n_values[int(sensor[-1])] = value
         if sensor == 'S0':
             self.mean_value = value
             self.sensor_timestamp.append(datetime.now().strftime("%Y-%m-%dT%H:%M:%S"))
@@ -28,6 +31,7 @@ class Graphic():
         self.mean_value += value
         if sensor == f'S{_sensors_count-1}':
             self.mean_values.append(self.mean_value/_sensors_count)
+            self.std.append(np.std(self.last_n_values,ddof=1))
 
     def update_graphic(self, mark_flags = [], update = False):
         if update:
@@ -43,8 +47,9 @@ class Graphic():
             self.ax[-1].plot(self.sensors_values[f'S{s}'],linewidth=0.5,color=self.colors[s],label=f'S{s}')
             if self.marker_point[s] != -1:
                 ax.axvline(self.marker_point[s],linestyle='--',linewidth=0.5,color='red')
-        self.ax[-1].plot(self.mean_values,linewidth=0.5,color='black',label='Média')
-        self.ax[-1].legend(fontsize=6)
+        self.ax[-1].plot(self.mean_values,linewidth=0.7,color='black',
+                         label=f'Mean = {round(self.mean_values[-1],2)} | dp = {round(self.std[-1],2)}', marker='.')
+        self.ax[-1].legend(fontsize=6,bbox_to_anchor=(1, 1))
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
     

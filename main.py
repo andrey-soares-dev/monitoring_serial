@@ -20,7 +20,7 @@ def open_serial_port(port_name, baudrate=115200, timeout=5):
                     data = ser.readline().decode(errors='ignore').strip()
                     count += 1
                     print(data)
-                    if data and 'S0' in data:
+                    if (data and 'S0' in data) or (data and 'I2C' in data):
                         print("Target value received!")
                         return ser
                     elif data and 'ets' in data:
@@ -43,13 +43,16 @@ def run(frame):
             line = conn.readline().decode('utf-8').strip()
             values = line.split(',')
             for i, item in enumerate(values):
-                sensor, value = item.split(':')
-                value = float(value)
-                should_update = test_control[sensor].check_status(value)
-                any_update = any_update if any_update else should_update
-                if should_update:
-                    marks.append(i)
-                graphic.update_list(sensor,value)
+                try:
+                    sensor, value = item.split(':')
+                    value = float(value)
+                    should_update = test_control[sensor].check_status(value)
+                    any_update = any_update if any_update else should_update
+                    if should_update:
+                        marks.append(i)
+                    graphic.update_list(sensor,value)
+                except Exception as ex:
+                    return
             graphic.update_graphic(marks,any_update)
                     
     except Exception as ex:
@@ -63,7 +66,7 @@ for port in available_ports:
     if conn is not None:
         print(conn)
         break
-n_sensors = 2
+n_sensors = 5
 test_control = {f'S{i}':DerivativeControl() for i in range(n_sensors)}
 graphic = Graphic()
 anim = FuncAnimation(graphic.fig,run,cache_frame_data=False)
