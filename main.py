@@ -21,7 +21,7 @@ def open_serial_port(port_name, baudrate=115200, timeout=5):
                     data = ser.readline().decode(errors='ignore').strip()
                     count += 1
                     print(data)
-                    if (data and 'S0' in data) or (data and 'I2C' in data):
+                    if (data and 'S0' in data) or (data and 'I2C' in data) or (data and 'ets' in data):
                         print("Target value received!")
                         return ser
                     elif data and 'ets' in data:
@@ -67,7 +67,8 @@ def run(frame):
             graphic.update_graphic(marks,any_update)
                     
     except Exception as ex:
-        conn.close()
+        print(ex)
+        return
 
 available_ports = list_serial_ports()
 conn = None
@@ -86,3 +87,4 @@ if not graphic.reseted:
     window = SaveWindow()
     if window.name:
         graphic.save_data(window.name)
+conn.close()
