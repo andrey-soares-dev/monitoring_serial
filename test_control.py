@@ -71,7 +71,7 @@ class DerivativeControl():
         else:
             self.actual_step = 0
         
-        if self.actual_step == 30:
+        if self.actual_step == self.total_steps:
             self.stationary = True
             return True
         return False
@@ -80,7 +80,7 @@ import numpy as np
 class StandardDeviationControl():
     def __init__(self, cv_stat=0.25, total_steps=30, step_size=1):
         self.cv_stat = cv_stat
-        self.total_steps = 30
+        self.total_steps = total_steps
         self.step_size = step_size
         self.stationary = False
         self.window = []

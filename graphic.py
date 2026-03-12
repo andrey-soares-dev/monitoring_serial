@@ -4,6 +4,8 @@ import numpy as np
 from datetime import datetime
 import os
 
+from scipy.signal import wiener
+
 _sensors_count = 5
 
 class Graphic():
@@ -46,6 +48,7 @@ class Graphic():
             ax.set_ylabel('Valor')
             ax.plot(self.sensors_values[f'S{s}'], color='green')
             self.ax[-1].plot(self.sensors_values[f'S{s}'],linewidth=0.5,color=self.colors[s],label=f'S{s}')
+            ax.plot(wiener(self.sensors_values[f'S{s}']),linewidth=0.3,color='red',label=f'S{s}')
             if self.marker_point[s] != -1:
                 ax.axvline(self.marker_point[s],linestyle='--',linewidth=0.5,color='red')
         self.ax[-1].plot(self.mean_values,linewidth=0.7,color='black',
@@ -75,3 +78,14 @@ class Graphic():
         for s,ax in enumerate(self.ax):
             ax.clear()
         self.fig.canvas.flush_events()
+
+    def apply_wiener_filter(self):
+        fig, ax = plt.subplots(nrows=_sensors_count+1, ncols=1, figsize=(16, 9), sharex=True)
+        fig.subplots_adjust(hspace=0.3)
+        ax[-1].clear()
+        ax[-1].set_ylabel('Filtered_Value')
+        for s,ax in enumerate(ax[:-1]):
+            ax.clear()
+            ax.set_ylabel('Valor')
+            ax.plot(wiener(self.sensors_values[f'S{s}']), color='green')
+            self.ax[-1].plot(self.sensors_values[f'S{s}'],linewidth=0.5,color=self.colors[s],label=f'S{s}')

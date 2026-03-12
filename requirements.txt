@@ -18,6 +18,7 @@ pyserial==3.5
 python-dateutil==2.9.0.post0
 pywin32-ctypes==0.2.3
 PyYAML==6.0.3
+scipy==1.17.1
 setuptools==82.0.0
 six==1.17.0
 tzdata==2025.3
