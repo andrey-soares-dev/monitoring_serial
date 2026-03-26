@@ -21,12 +21,12 @@ def open_serial_port(port_name, baudrate=115200, timeout=5):
                     data = ser.readline().decode(errors='ignore').strip()
                     count += 1
                     print(data)
-                    if (data and 'S0' in data) or (data and 'I2C' in data) or (data and 'ets' in data):
+                    if (data and 'T_BME' in data) or (data and 'CHECKUP' in data) or (data and 'ets' in data) or (data and 'SCD' in data):
                         print("Target value received!")
                         return ser
                     elif data and 'ets' in data:
                         continue
-                    elif data and 'S0' not in data:
+                    elif data and 'T_BME' not in data:
                         return None
                     if count >= 2:
                         return None
@@ -47,11 +47,17 @@ def run(frame):
             for i, item in enumerate(values):
                 try:
                     sensor, value = item.split(':')
+                    if sensor == 'ST':
+                        continue
                     value = float(value)
                     should_update = test_control[sensor].check_status(value)
                     any_update = any_update if any_update else should_update
                     if should_update:
                         marks.append(i)
+                    try:
+                        int(sensor[1])
+                    except Exception as ex:
+                        continue
                     graphic.update_list(sensor,value)
                     graphic.reseted = False
                 except Exception as ex:
@@ -67,7 +73,7 @@ def run(frame):
             graphic.update_graphic(marks,any_update)
                     
     except Exception as ex:
-        print(ex)
+        print('ex:',ex)
         return
 
 available_ports = list_serial_ports()
@@ -78,8 +84,8 @@ for port in available_ports:
     if conn is not None:
         print(conn)
         break
-n_sensors = 5
-test_control = {f'S{i}':DerivativeControl() for i in range(n_sensors)}
+n_sensors = 4
+test_control = {f'{i}':DerivativeControl() for i in ['T_BME','H_BME','S1_CO2','S2_CO2']}
 graphic = Graphic()
 anim = FuncAnimation(graphic.fig,run,cache_frame_data=False)
 plt.show()
