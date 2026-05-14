@@ -1,16 +1,21 @@
+import sys
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from datetime import datetime
 import os
 
+import requests
 from scipy.signal import wiener
+import json
+
+from matplotlib.widgets import Button
 
 _sensors_count = 4
 _effective_count = 2
 
 class Graphic():
-    def __init__(self):
+    def __init__(self, api_ip):
         plt.style.use('bmh') 
         self.fig, self.ax = plt.subplots(nrows=_sensors_count+1, ncols=1, figsize=(16, 9), sharex=True)
         self.fig.subplots_adjust(hspace=0.3)
@@ -25,17 +30,24 @@ class Graphic():
         self.mean_values = []
         self.std = []
         self.reseted = False
+        self.should_reset = False
+        self.api_ip = api_ip
 
-    def update_list(self,sensor,value):
+        ax_botao = self.fig.add_axes([0.8, 0.02, 0.1, 0.05]) 
+        self.btn_salvar = Button(ax_botao, 'Resetar/Salvar Dados')
+        self.btn_salvar.on_clicked(self.ao_clicar_botao)
+
+    def update_list(self,sensor,value,not_skip=True):
         self.sensors_values[sensor].append(value)
-        self.last_n_values[int(sensor[1])-1] = value
+        if not_skip:
+            self.last_n_values[int(sensor[1])-1] = value
         if 'S1' in sensor:
             self.mean_value = value
             self.sensor_timestamp.append(datetime.now().strftime("%Y-%m-%dT%H:%M:%S"))
             return
-        if sensor == 'S2':
+        if 'S2' in sensor:
             self.mean_value += value
-            self.mean_values.append(self.mean_value/_sensors_count)
+            self.mean_values.append(self.mean_value/_effective_count)
             self.std.append(np.std(self.last_n_values,ddof=1))
 
     def update_graphic(self, mark_flags = [], update = False):
@@ -47,9 +59,10 @@ class Graphic():
         self.ax[-1].set_ylabel('Valor')
         for s,ax in enumerate(self.ax[:-1]):
             ax.clear()
-            ax.set_ylabel('Valor')
+            ax.set_ylabel(self.sensors_keys[s])
             ax.plot(self.sensors_values[self.sensors_keys[s]], color='green')
-            self.ax[-1].plot(self.sensors_values[self.sensors_keys[s]],linewidth=0.5,color=self.colors[s],label=self.sensors_keys[s])
+            if 'S' in self.sensors_keys[s]:
+                self.ax[-1].plot(self.sensors_values[self.sensors_keys[s]],linewidth=0.5,color=self.colors[s],label=self.sensors_keys[s])
             ax.plot(wiener(self.sensors_values[self.sensors_keys[s]]),linewidth=0.3,color='red',label=self.sensors_keys[s])
             if self.marker_point[s] != -1:
                 ax.axvline(self.marker_point[s],linestyle='--',linewidth=0.5,color='red')
@@ -59,14 +72,21 @@ class Graphic():
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
     
-    def save_data(self,name=None):
+    def save_data(self, name=None):
         now = datetime.now().strftime("%Y-%m-%d_%H-%M")
-        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if getattr(sys, 'frozen', False):
+            root = os.path.dirname(sys.executable)
+        else:
+            root = os.path.dirname(os.path.abspath(__file__))
         self.sensors_values['dateTime'] = self.sensor_timestamp
         df = pd.DataFrame(self.sensors_values)
         name = name if name else now
-        df.to_csv(os.path.join(root,f'{name}.csv'),sep=';',index=False)
-        self.fig.savefig(os.path.join(root,f'{name}.svg'),format='svg')
+        
+        csv_path = os.path.join(root, f'{name}.csv')
+        svg_path = os.path.join(root, f'{name}.svg')
+        df.to_csv(csv_path, sep=';', index=False)
+        self.fig.savefig(svg_path, format='svg')
+        return self.send_data(df,name)
 
     def reset(self):
         self.sensor_timestamp = []
@@ -91,3 +111,13 @@ class Graphic():
             ax.set_ylabel('Valor')
             ax.plot(wiener(self.sensors_values[self.sensors_keys[s]]), color='green')
             self.ax[-1].plot(self.sensors_values[self.sensors_keys[s]],linewidth=0.5,color=self.colors[s],label=self.sensors_keys[s])
+
+    def ao_clicar_botao(self, event):
+        self.should_reset = True
+
+    def send_data(self, dataset, name):
+        payload = json.dumps({'data':dataset.to_dict(orient='records')})
+        response = requests.post(url=f'http://{self.api_ip}/send-data/name/{name}',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=payload)
+        return response.status_code == 200
