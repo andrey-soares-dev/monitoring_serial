@@ -41,7 +41,7 @@ class HeuristicTestControl():
         return False
     
 class DerivativeControl():
-    def __init__(self, epsilon=0.03, total_steps=10, step_size=1):
+    def __init__(self, epsilon=10, total_steps=10, step_size=1):
         self.epsilon = epsilon
         self.total_steps = total_steps
         self.step_size = step_size

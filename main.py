@@ -85,48 +85,78 @@ def run(frame):
         print('ex:',ex)
         return
 
-def save_port_api():
-    global ip
-    global ip_port
-    print(ip.get())
-    ip_port = ip.get()
-    global window
-    window.quit()
-    window.destroy()
-    return
 
-window = tk.Tk()
-window.title("Set Ip")
-window.geometry("300x120")
+ip_port = ""
+n_sensors = "0"
 
-width = 300
-height = 150
+while True:
+    def save_port_api():
+        global ip_port
+        global n_sensors
+        ip_port = ip.get()
+        n_sensors = entry_sensores.get()
+        window.quit()
+        window.destroy()
 
-width_screen = window.winfo_screenwidth()
-height_screen = window.winfo_screenheight()
+    def numeric_validation(value):
+        try:
+            int(value)
+            return True
+        except Exception as ex:
+            return False
+        
+    window = tk.Tk()
+    window.title("Configuração da API")
+    
+    width = 300
+    height = 200
 
-pos_x = (width_screen // 2) - (width // 2)
-pos_y = (height_screen // 2) - (height // 2)
+    width_screen = window.winfo_screenwidth()
+    height_screen = window.winfo_screenheight()
 
-window.geometry(f"{width}x{height}+{pos_x}+{pos_y}")
+    pos_x = (width_screen // 2) - (width // 2)
+    pos_y = (height_screen // 2) - (height // 2)
 
-window.attributes('-topmost', True)
-window.config(padx=20, pady=20)
+    window.geometry(f"{width}x{height}+{pos_x}+{pos_y}")
 
-label_ip = tk.Label(window, text="Insira o IP:")
-label_ip.grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 5))
+    window.attributes('-topmost', True)
+    window.config(padx=20, pady=20)
 
-ip = tk.Entry(window, width=30)
-ip.grid(row=1, column=0, columnspan=2, pady=(0, 15))
-ip.focus()
+    ip_label = tk.Label(window, text="Insira o IP:")
+    ip_label.grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 5))
 
-btn_ok = tk.Button(window, text="OK", width=10, command=save_port_api, bg="#e1e1e1")
-btn_ok.grid(row=2, column=0, padx=5)
+    ip = tk.Entry(window, width=30)
+    ip.grid(row=1, column=0, columnspan=2, pady=(0, 10))
+    ip.focus()
 
-window.mainloop()
-print('IP:',ip_port)
-response = requests.get(url=f'http://{ip_port}/callback',
-                            headers={'Content-Type': 'application/json'})
+    validation = (window.register(numeric_validation), '%P')
+    sensors_label = tk.Label(window, text="Número de sensores:")
+    sensors_label.grid(row=2, column=0, columnspan=2, sticky="w", pady=(0, 5))
+
+    entry_sensores = tk.Entry(window, width=30, validate='key', validatecommand=numeric_validation)
+    entry_sensores.grid(row=3, column=0, columnspan=2, pady=(0, 15))
+
+    btn_ok = tk.Button(window, text="OK", width=10, command=save_port_api, bg="#e1e1e1")
+    btn_ok.grid(row=4, column=0, padx=5)
+
+    window.mainloop()
+    
+    print('IP:', ip_port)
+    print('Sensores:', n_sensors)
+    
+    try:
+        response = requests.get(url=f'http://{ip_port}/callback',
+                                headers={'Content-Type': 'application/json'},
+                                timeout=5)
+        
+        if response.status_code == 200:
+            print("Sucesso! Status 200.")
+            break
+
+    except requests.exceptions.RequestException as e:
+        pass
+
+n_sensors = int(n_sensors)
 available_ports = list_serial_ports()
 conn = None
 for port in available_ports:
@@ -135,9 +165,12 @@ for port in available_ports:
     if conn is not None:
         print(conn)
         break
-n_sensors = 4
-test_control = {f'{i}':DerivativeControl() for i in ['T_BME','H_BME','S1_CO2','S2_CO2']}
-graphic = Graphic(ip_port)
+
+available_sensors = ['T_BME','H_BME']
+specific_sensors = [f'S{i+1}_CO2' for i in range(n_sensors)]
+available_sensors.extend(specific_sensors)
+test_control = {f'{i}':DerivativeControl() for i in available_sensors}
+graphic = Graphic(ip_port, available_sensors)
 anim = FuncAnimation(graphic.fig,run,cache_frame_data=False)
 plt.show()
 if not graphic.reseted:
