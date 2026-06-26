@@ -22,7 +22,7 @@ class Graphic():
         self.sensor_timestamp = []
         self.sensors_values = {f'{i}' : [] for i in self.sensors_keys}
         self.marker_point = np.ones(self.n_sensors)*-1
-        self.colors = ['forestgreen','brown','dodgerblue','darkorange','darkviolet']
+        self.colors = ['forestgreen','brown','dodgerblue','darkorange','darkviolet','navy','pink']
         self.mean_value = None
         self.last_n_values = np.ones(self.n_sensors-2)
         self.mean_values = []
@@ -31,13 +31,13 @@ class Graphic():
         self.should_reset = False
         self.api_ip = api_ip
         
-        ax_botao_gas_injection = self.fig.add_axes([0.8, 0.08, 0.1, 0.05]) 
+        ax_botao_gas_injection = self.fig.add_axes([0.8, 0.05, 0.1, 0.025]) 
         self.btn_injection = Button(ax_botao_gas_injection, 'Injeção do Gás')
         self.btn_injection.on_clicked(self.ao_clicar_injection)
         self.gas_injection = False
-        self.injection_index = 0
+        self.injection_index = -1
 
-        ax_botao = self.fig.add_axes([0.8, 0.02, 0.1, 0.05]) 
+        ax_botao = self.fig.add_axes([0.8, 0.02, 0.1, 0.025]) 
         self.btn_salvar = Button(ax_botao, 'Resetar/Salvar Dados')
         self.btn_salvar.on_clicked(self.ao_clicar_botao)
 
@@ -51,8 +51,9 @@ class Graphic():
             return
         if 'S' in sensor and str.isnumeric(sensor[1]):
             self.mean_value += value
-            self.mean_values.append(self.mean_value/(self.n_sensors-2))
-            self.std.append(np.std(self.last_n_values,ddof=1))
+            if int(sensor[1]) == self.n_sensors-2:
+                self.mean_values.append(self.mean_value/(self.n_sensors-2))
+                self.std.append(np.std(self.last_n_values,ddof=1))
 
     def update_graphic(self, mark_flags = [], update = False):
         if update:
@@ -67,13 +68,15 @@ class Graphic():
             ax.plot(self.sensors_values[self.sensors_keys[s]], color='green')
             if 'S' in self.sensors_keys[s]:
                 self.ax[-1].plot(self.sensors_values[self.sensors_keys[s]],linewidth=0.5,color=self.colors[s],label=self.sensors_keys[s])
-            ax.plot(wiener(self.sensors_values[self.sensors_keys[s]]),linewidth=0.3,color='red',label=self.sensors_keys[s])
+            #ax.plot(wiener(self.sensors_values[self.sensors_keys[s]]),linewidth=0.3,color='red',label=self.sensors_keys[s])
             if self.marker_point[s] != -1:
                 ax.axvline(self.marker_point[s],linestyle='--',linewidth=0.5,color='red')
             if self.gas_injection:
-                ax.axvline(self.injection_index,linestyle='--',linewidth=0.5,color='black')
+                ax.axvline(self.injection_index,linewidth=0.7,color='black')
         self.ax[-1].plot(self.mean_values,linewidth=0.7,color='black',
                          label=f'Mean = {round(self.mean_values[-1],2)} | dp = {round(self.std[-1],2)}', marker='.')
+        if self.gas_injection:
+            self.ax[-1].axvline(self.injection_index,linewidth=0.7,color='black')
         self.ax[-1].legend(fontsize=6,bbox_to_anchor=(1, 1))
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
@@ -87,7 +90,8 @@ class Graphic():
         self.sensors_values['dateTime'] = self.sensor_timestamp
         df = pd.DataFrame(self.sensors_values)
         injection_flags = np.zeros(len(df))
-        injection_flags[self.injection_index] = 1
+        if self.gas_injection:
+            injection_flags[self.injection_index] = 1
         df['Injection'] = injection_flags
         name = name if name else now
         
@@ -106,6 +110,11 @@ class Graphic():
         self.mean_values = []
         self.std = []
         self.reseted = True
+        self.gas_injection = False
+        self.injection_index = -1
+        self.btn_injection.set_active(True)
+        self.gas_injection = False
+        self.injection_index = -1
         for s,ax in enumerate(self.ax):
             ax.clear()
         self.fig.canvas.flush_events()
@@ -135,3 +144,4 @@ class Graphic():
         self.gas_injection = True
         index = len(self.sensors_values[self.sensors_keys[0]])
         self.injection_index = index
+        self.btn_injection.set_active(False)
