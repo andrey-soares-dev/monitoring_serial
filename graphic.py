@@ -66,8 +66,10 @@ class Graphic():
 
     def update_graphic(self, mark_flags = [], update = False):
         if update:
-            for s in mark_flags:
-                self.marker_point[s] = len(self.sensors_values[self.sensors_keys[s]])-1
+            for s_name in mark_flags:
+                if s_name in self.sensors_keys:
+                    idx = self.sensors_keys.index(s_name)
+                    self.marker_point[idx] = len(self.sensors_values[s_name]) - 1
     
         self.ax[-1].clear()
         self.ax[-1].set_facecolor('#2d2d2d')
@@ -89,8 +91,10 @@ class Graphic():
                 ax.axvline(self.marker_point[s],linestyle='--',linewidth=1.0,color='#ff3333')
             if self.gas_injection:
                 ax.axvline(self.injection_index,linestyle='--',linewidth=1.0,color='#ffffff')
-        self.ax[-1].plot(self.mean_values,linewidth=2.0,color='white',
-                         label=f'Mean = {round(self.mean_values[-1],2)} | dp = {round(self.std[-1],2)}', marker='', linestyle='-')
+        
+        if len(self.mean_values) > 0:
+            self.ax[-1].plot(self.mean_values,linewidth=2.0,color='white',
+                             label=f'Mean = {round(self.mean_values[-1],2)} | dp = {round(self.std[-1],2)}', marker='', linestyle='-')
         self.ax[-1].legend(fontsize=9, bbox_to_anchor=(1.01, 1), loc='upper left', frameon=True, facecolor='#2d2d2d', edgecolor='#444444', labelcolor='white')
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()

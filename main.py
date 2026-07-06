@@ -84,7 +84,7 @@ def run(frame):
                     any_update = any_update if any_update else should_update
                     
                     if should_update:
-                        marks.append(i)
+                        marks.append(sensor)
                         
                     has_digit = any(char.isdigit() for char in sensor)
                     not_skip = has_digit
