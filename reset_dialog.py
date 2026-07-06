@@ -1,12 +1,19 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import ttk, messagebox
 
 class SaveWindow():
 
     def __init__(self):
         self.window = tk.Tk()
-        self.window.title("Salvar")
-        self.window.geometry("300x120")
+        self.window.title("Salvar Dados")
+        self.window.geometry("320x150")
+        self.window.configure(bg="#f0f0f0")
+
+        style = ttk.Style()
+        style.theme_use('clam')
+        style.configure('TLabel', background="#f0f0f0", font=('Segoe UI', 10))
+        style.configure('TButton', font=('Segoe UI', 10))
+        style.configure('TEntry', font=('Segoe UI', 10))
         
         width = 300
         height = 150
@@ -22,18 +29,18 @@ class SaveWindow():
         self.window.attributes('-topmost', True)
         self.window.config(padx=20, pady=20)
 
-        label_nome = tk.Label(self.window, text="Insira o nome do arquivo:")
+        label_nome = ttk.Label(self.window, text="Insira o nome do arquivo:")
         label_nome.grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 5))
 
-        self.file_name = tk.Entry(self.window, width=30)
-        self.file_name.grid(row=1, column=0, columnspan=2, pady=(0, 15))
+        self.file_name = ttk.Entry(self.window, width=35)
+        self.file_name.grid(row=1, column=0, columnspan=2, pady=(0, 15), ipady=3)
         self.file_name.focus()
 
-        btn_ok = tk.Button(self.window, text="OK", width=10, command=self.save, bg="#e1e1e1")
-        btn_ok.grid(row=2, column=0, padx=5)
+        btn_ok = ttk.Button(self.window, text="OK", width=12, command=self.save)
+        btn_ok.grid(row=2, column=0, padx=(0, 5), sticky="e")
 
-        btn_cancelar = tk.Button(self.window, text="Cancelar", width=10, command=self.cancel)
-        btn_cancelar.grid(row=2, column=1, padx=5)
+        btn_cancelar = ttk.Button(self.window, text="Cancelar", width=12, command=self.cancel)
+        btn_cancelar.grid(row=2, column=1, padx=(5, 0), sticky="w")
 
         self.name = None
 

@@ -13,46 +13,56 @@ from matplotlib.widgets import Button
 
 class Graphic():
     def __init__(self, api_ip, sensors_keys = []):
-        plt.style.use('bmh') 
+        plt.style.use('dark_background') 
         self.fig, self.ax = plt.subplots(nrows=len(sensors_keys)+1, ncols=1, figsize=(16, 9), sharex=True)
-        self.fig.subplots_adjust(hspace=0.3)
+        self.fig.subplots_adjust(hspace=0.35, top=0.95, bottom=0.15, left=0.08, right=0.95)
+        self.fig.patch.set_facecolor('#1e1e1e')
+        for ax in self.ax:
+            ax.set_facecolor('#2d2d2d')
+            ax.grid(color='#444444', linestyle='--', linewidth=0.5)
         
         self.n_sensors = len(sensors_keys)
         self.sensors_keys = sensors_keys 
         self.sensor_timestamp = []
         self.sensors_values = {f'{i}' : [] for i in self.sensors_keys}
         self.marker_point = np.ones(self.n_sensors)*-1
-        self.colors = ['forestgreen','brown','dodgerblue','darkorange','darkviolet']
-        self.mean_value = None
-        self.last_n_values = np.ones(self.n_sensors-2)
+        self.colors = ['#00ff00', '#ff4444', '#00ccff', '#ffaa00', '#ff00ff']
+        self.avg_sensors = [s for s in self.sensors_keys if any(c.isdigit() for c in s)]
+        self.last_n_values = np.zeros(len(self.avg_sensors)) if self.avg_sensors else np.zeros(1)
         self.mean_values = []
         self.std = []
         self.reseted = False
         self.should_reset = False
         self.api_ip = api_ip
         
-        ax_botao_gas_injection = self.fig.add_axes([0.8, 0.08, 0.1, 0.05]) 
-        self.btn_injection = Button(ax_botao_gas_injection, 'Injeção do Gás')
+        ax_botao_gas_injection = self.fig.add_axes([0.65, 0.03, 0.15, 0.06]) 
+        self.btn_injection = Button(ax_botao_gas_injection, 'Injeção do Gás', color='#444444', hovercolor='#666666')
+        self.btn_injection.label.set_color('white')
+        self.btn_injection.label.set_fontweight('bold')
         self.btn_injection.on_clicked(self.ao_clicar_injection)
         self.gas_injection = False
         self.injection_index = 0
 
-        ax_botao = self.fig.add_axes([0.8, 0.02, 0.1, 0.05]) 
-        self.btn_salvar = Button(ax_botao, 'Resetar/Salvar Dados')
+        ax_botao = self.fig.add_axes([0.82, 0.03, 0.15, 0.06]) 
+        self.btn_salvar = Button(ax_botao, 'Resetar/Salvar Dados', color='#444444', hovercolor='#666666')
+        self.btn_salvar.label.set_color('white')
+        self.btn_salvar.label.set_fontweight('bold')
         self.btn_salvar.on_clicked(self.ao_clicar_botao)
 
     def update_list(self,sensor,value,not_skip=True):
         self.sensors_values[sensor].append(value)
-        if not_skip:
-            self.last_n_values[int(sensor[1])-1] = value
-        if 'S1' in sensor:
-            self.mean_value = value
+        
+        if sensor == self.sensors_keys[0]:
             self.sensor_timestamp.append(datetime.now().strftime("%Y-%m-%dT%H:%M:%S"))
-            return
-        if 'S' in sensor and str.isnumeric(sensor[1]):
-            self.mean_value += value
-            self.mean_values.append(self.mean_value/(self.n_sensors-2))
-            self.std.append(np.std(self.last_n_values,ddof=1))
+            
+        if not_skip and sensor in self.avg_sensors:
+            idx = self.avg_sensors.index(sensor)
+            self.last_n_values[idx] = value
+            
+        if self.avg_sensors and sensor == self.avg_sensors[-1]:
+            current_mean = np.mean(self.last_n_values)
+            self.mean_values.append(current_mean)
+            self.std.append(np.std(self.last_n_values, ddof=1) if len(self.last_n_values) > 1 else 0)
 
     def update_graphic(self, mark_flags = [], update = False):
         if update:
@@ -60,21 +70,28 @@ class Graphic():
                 self.marker_point[s] = len(self.sensors_values[self.sensors_keys[s]])-1
     
         self.ax[-1].clear()
-        self.ax[-1].set_ylabel('Valor')
+        self.ax[-1].set_facecolor('#2d2d2d')
+        self.ax[-1].grid(color='#444444', linestyle='--', linewidth=0.5)
+        self.ax[-1].set_ylabel('Valor Total', fontweight='bold')
         for s,ax in enumerate(self.ax[:-1]):
             ax.clear()
-            ax.set_ylabel(self.sensors_keys[s])
-            ax.plot(self.sensors_values[self.sensors_keys[s]], color='green')
-            if 'S' in self.sensors_keys[s]:
-                self.ax[-1].plot(self.sensors_values[self.sensors_keys[s]],linewidth=0.5,color=self.colors[s],label=self.sensors_keys[s])
-            ax.plot(wiener(self.sensors_values[self.sensors_keys[s]]),linewidth=0.3,color='red',label=self.sensors_keys[s])
+            ax.set_facecolor('#2d2d2d')
+            ax.grid(color='#444444', linestyle='--', linewidth=0.5)
+            ax.set_ylabel(self.sensors_keys[s], fontweight='bold')
+            ax.plot(self.sensors_values[self.sensors_keys[s]], color='#888888', linewidth=0.8, alpha=0.5)
+            if self.sensors_keys[s] in self.avg_sensors:
+                color_idx = s % len(self.colors)
+                self.ax[-1].plot(self.sensors_values[self.sensors_keys[s]],linewidth=1.0,color=self.colors[color_idx],label=self.sensors_keys[s], alpha=0.8)
+                ax.plot(wiener(self.sensors_values[self.sensors_keys[s]]),linewidth=1.5,color=self.colors[color_idx],label=self.sensors_keys[s])
+            else:
+                ax.plot(wiener(self.sensors_values[self.sensors_keys[s]]),linewidth=1.5,color='#00ff00',label=self.sensors_keys[s])
             if self.marker_point[s] != -1:
-                ax.axvline(self.marker_point[s],linestyle='--',linewidth=0.5,color='red')
+                ax.axvline(self.marker_point[s],linestyle='--',linewidth=1.0,color='#ff3333')
             if self.gas_injection:
-                ax.axvline(self.injection_index,linestyle='--',linewidth=0.5,color='black')
-        self.ax[-1].plot(self.mean_values,linewidth=0.7,color='black',
-                         label=f'Mean = {round(self.mean_values[-1],2)} | dp = {round(self.std[-1],2)}', marker='.')
-        self.ax[-1].legend(fontsize=6,bbox_to_anchor=(1, 1))
+                ax.axvline(self.injection_index,linestyle='--',linewidth=1.0,color='#ffffff')
+        self.ax[-1].plot(self.mean_values,linewidth=2.0,color='white',
+                         label=f'Mean = {round(self.mean_values[-1],2)} | dp = {round(self.std[-1],2)}', marker='', linestyle='-')
+        self.ax[-1].legend(fontsize=9, bbox_to_anchor=(1.01, 1), loc='upper left', frameon=True, facecolor='#2d2d2d', edgecolor='#444444', labelcolor='white')
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
     
@@ -101,13 +118,14 @@ class Graphic():
         self.sensor_timestamp = []
         self.sensors_values = {f'{i}' : [] for i in self.sensors_keys}
         self.marker_point = np.ones(self.n_sensors)*-1
-        self.mean_value = None
-        self.last_n_values = np.ones(self.n_sensors)
+        self.last_n_values = np.zeros(len(self.avg_sensors)) if self.avg_sensors else np.zeros(1)
         self.mean_values = []
         self.std = []
         self.reseted = True
         for s,ax in enumerate(self.ax):
             ax.clear()
+            ax.set_facecolor('#2d2d2d')
+            ax.grid(color='#444444', linestyle='--', linewidth=0.5)
         self.fig.canvas.flush_events()
 
     def apply_wiener_filter(self):
