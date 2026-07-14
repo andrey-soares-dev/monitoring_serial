@@ -16,7 +16,7 @@ class Graphic():
             plot_sensors = all_sensors
         plt.style.use('dark_background') 
         self.fig, self.ax = plt.subplots(nrows=len(plot_sensors)+1, ncols=1, figsize=(16, 9), sharex=True)
-        self.fig.subplots_adjust(hspace=0.45, top=0.95, bottom=0.15, left=0.08, right=0.82)
+        self.fig.subplots_adjust(hspace=0.45, top=0.95, bottom=0.15, left=0.08, right=0.95)
         self.fig.patch.set_facecolor('#1e1e1e')
         for ax in self.ax:
             ax.set_facecolor('#2d2d2d')
@@ -87,9 +87,11 @@ class Graphic():
             ax.tick_params(axis='both', which='major', labelsize=8)
             
             raw_data = self.sensors_values[s_name]
+            current_val = raw_data[-1] if len(raw_data) > 0 else 0
+            
             if s_name in self.avg_sensors:
                 color_idx = s % len(self.colors)
-                self.ax[-1].plot(raw_data,linewidth=1.0,color=self.colors[color_idx],label=s_name, alpha=0.8)
+                self.ax[-1].plot(raw_data,linewidth=1.0,color=self.colors[color_idx],label=f"{s_name} : {current_val}", alpha=0.8)
                 ax.plot(raw_data,linewidth=1.5,color=self.colors[color_idx],label=s_name)
             else:
                 ax.plot(raw_data,linewidth=1.5,color='#00ff00',label=s_name)
@@ -101,7 +103,7 @@ class Graphic():
         if len(self.mean_values) > 0:
             self.ax[-1].plot(self.mean_values,linewidth=2.0,color='white',
                              label=f'Mean = {round(self.mean_values[-1],2)} | dp = {round(self.std[-1],2)}', marker='', linestyle='-')
-        self.ax[-1].legend(fontsize=9, bbox_to_anchor=(1.01, 1), loc='upper left', frameon=True, facecolor='#2d2d2d', edgecolor='#444444', labelcolor='white')
+        self.ax[-1].legend(fontsize=9, loc='lower left', frameon=True, facecolor='#2d2d2d', edgecolor='#444444', labelcolor='white')
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
     
