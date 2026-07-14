@@ -160,8 +160,8 @@ while True:
     import re
     groups = {}
     for s in available_sensors:
-        match = re.search(r'\d+', s)
-        sid = int(match.group()) if match else 0
+        match = re.search(r'_(\d+)', s)
+        sid = int(match.group(1)) if match else 0
         if sid not in groups:
             groups[sid] = []
         groups[sid].append(s)
