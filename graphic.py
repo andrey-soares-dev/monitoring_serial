@@ -6,7 +6,6 @@ from datetime import datetime
 import os
 
 import requests
-from scipy.signal import wiener
 import json
 
 from matplotlib.widgets import Button
@@ -17,7 +16,7 @@ class Graphic():
             plot_sensors = all_sensors
         plt.style.use('dark_background') 
         self.fig, self.ax = plt.subplots(nrows=len(plot_sensors)+1, ncols=1, figsize=(16, 9), sharex=True)
-        self.fig.subplots_adjust(hspace=0.35, top=0.95, bottom=0.15, left=0.08, right=0.95)
+        self.fig.subplots_adjust(hspace=0.45, top=0.95, bottom=0.15, left=0.08, right=0.82)
         self.fig.patch.set_facecolor('#1e1e1e')
         for ax in self.ax:
             ax.set_facecolor('#2d2d2d')
@@ -77,20 +76,23 @@ class Graphic():
         self.ax[-1].clear()
         self.ax[-1].set_facecolor('#2d2d2d')
         self.ax[-1].grid(color='#444444', linestyle='--', linewidth=0.5)
-        self.ax[-1].set_ylabel('Valor Total', fontweight='bold')
+        self.ax[-1].set_ylabel('Total', fontweight='bold', fontsize=8)
+        self.ax[-1].tick_params(axis='both', which='major', labelsize=8)
         for s,ax in enumerate(self.ax[:-1]):
             s_name = self.plot_sensors[s]
             ax.clear()
             ax.set_facecolor('#2d2d2d')
             ax.grid(color='#444444', linestyle='--', linewidth=0.5)
-            ax.set_ylabel(s_name, fontweight='bold')
-            ax.plot(self.sensors_values[s_name], color='#888888', linewidth=0.8, alpha=0.5)
+            ax.set_ylabel(s_name, fontweight='bold', fontsize=8)
+            ax.tick_params(axis='both', which='major', labelsize=8)
+            
+            raw_data = self.sensors_values[s_name]
             if s_name in self.avg_sensors:
                 color_idx = s % len(self.colors)
-                self.ax[-1].plot(self.sensors_values[s_name],linewidth=1.0,color=self.colors[color_idx],label=s_name, alpha=0.8)
-                ax.plot(wiener(self.sensors_values[s_name]),linewidth=1.5,color=self.colors[color_idx],label=s_name)
+                self.ax[-1].plot(raw_data,linewidth=1.0,color=self.colors[color_idx],label=s_name, alpha=0.8)
+                ax.plot(raw_data,linewidth=1.5,color=self.colors[color_idx],label=s_name)
             else:
-                ax.plot(wiener(self.sensors_values[s_name]),linewidth=1.5,color='#00ff00',label=s_name)
+                ax.plot(raw_data,linewidth=1.5,color='#00ff00',label=s_name)
             if self.marker_point[s] != -1:
                 ax.axvline(self.marker_point[s],linestyle='--',linewidth=1.0,color='#ff3333')
             if self.gas_injection:
@@ -135,18 +137,6 @@ class Graphic():
             ax.set_facecolor('#2d2d2d')
             ax.grid(color='#444444', linestyle='--', linewidth=0.5)
         self.fig.canvas.flush_events()
-
-    def apply_wiener_filter(self):
-        fig, ax = plt.subplots(nrows=self.n_sensors+1, ncols=1, figsize=(16, 9), sharex=True)
-        fig.subplots_adjust(hspace=0.3)
-        ax[-1].clear()
-        ax[-1].set_ylabel('Filtered_Value')
-        for s,ax in enumerate(ax[:-1]):
-            s_name = self.plot_sensors[s]
-            ax.clear()
-            ax.set_ylabel('Valor')
-            ax.plot(wiener(self.sensors_values[s_name]), color='green')
-            self.ax[-1].plot(self.sensors_values[s_name],linewidth=0.5,color=self.colors[s],label=s_name)
 
     def ao_clicar_botao(self, event):
         self.should_reset = True

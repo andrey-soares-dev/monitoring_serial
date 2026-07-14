@@ -27,6 +27,9 @@ def open_serial_port(port_name, baudrate=115200, timeout=5):
     try:
         ser = serial.Serial(port=port_name, baudrate=baudrate, timeout=timeout)
         if ser.is_open:
+            import time
+            start_time = None
+            all_sensors = set()
             try:
                 while True:
                     data = ser.readline().decode(errors='ignore').strip()
@@ -34,21 +37,24 @@ def open_serial_port(port_name, baudrate=115200, timeout=5):
                     print(data)
                     if data and not any(skip in data for skip in ['ets ', 'rst:', 'boot:', 'mode:']):
                         if ':' in data and ',' in data:
+                            if start_time is None:
+                                start_time = time.time()
                             try:
                                 parts = data.split(',')
-                                sensors = []
                                 for p in parts:
                                     if ':' in p:
                                         s_name = p.split(':')[0].strip()
                                         if s_name and s_name != 'ST':
-                                            sensors.append(s_name)
-                                
-                                if len(sensors) > 0:
-                                    print(f"Target device identified on {port_name}!")
-                                    return ser, sensors
+                                            all_sensors.add(s_name)
                             except Exception as ex:
                                 pass
-                    if count >= 15:
+                                
+                    if start_time is not None and (time.time() - start_time >= 5.5):
+                        if len(all_sensors) > 0:
+                            print(f"Target device identified on {port_name}!")
+                            return ser, list(all_sensors)
+                            
+                    if count >= 35 and start_time is None:
                         return None, []
             except Exception as ex:
                 return None, []
@@ -151,8 +157,20 @@ while True:
     style.configure('TEntry', font=('Segoe UI', 10))
     style.configure('TCheckbutton', background="#f0f0f0", font=('Segoe UI', 9))
     
-    width = 450
-    height = 250 + (len(available_sensors) // 3) * 30
+    import re
+    groups = {}
+    for s in available_sensors:
+        match = re.search(r'\d+', s)
+        sid = int(match.group()) if match else 0
+        if sid not in groups:
+            groups[sid] = []
+        groups[sid].append(s)
+        
+    num_cols = len(groups)
+    max_rows = max([len(g) for g in groups.values()]) if groups else 0
+
+    width = max(450, 150 + num_cols * 100)
+    height = 250 + max_rows * 30
 
     width_screen = window.winfo_screenwidth()
     height_screen = window.winfo_screenheight()
@@ -179,11 +197,15 @@ while True:
     frame_sensors.grid(row=3, column=0, sticky="w", pady=(0, 15))
     
     sensor_vars = {}
-    for i, s in enumerate(available_sensors):
-        var = tk.BooleanVar(value=True)
-        chk = ttk.Checkbutton(frame_sensors, text=s, variable=var, style='TCheckbutton')
-        chk.grid(row=i//3, column=i%3, sticky="w", padx=5, pady=2)
-        sensor_vars[s] = var
+    for col_idx, sid in enumerate(sorted(groups.keys())):
+        lbl_mod = ttk.Label(frame_sensors, text=f"Módulo {sid}" if sid > 0 else "Outros", font=('Segoe UI', 9, 'bold'))
+        lbl_mod.grid(row=0, column=col_idx, sticky="w", padx=10, pady=(0, 5))
+        
+        for row_idx, s in enumerate(sorted(groups[sid])):
+            var = tk.BooleanVar(value=True)
+            chk = ttk.Checkbutton(frame_sensors, text=s, variable=var, style='TCheckbutton')
+            chk.grid(row=row_idx+1, column=col_idx, sticky="w", padx=10, pady=2)
+            sensor_vars[s] = var
 
     btn_ok = ttk.Button(window, text="Confirmar", width=15, command=save_port_api)
     btn_ok.grid(row=4, column=0)
