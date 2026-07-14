@@ -16,7 +16,7 @@ class Graphic():
             plot_sensors = all_sensors
         plt.style.use('dark_background') 
         self.fig, self.ax = plt.subplots(nrows=len(plot_sensors)+1, ncols=1, figsize=(16, 9), sharex=True)
-        self.fig.subplots_adjust(hspace=0.45, top=0.95, bottom=0.15, left=0.08, right=0.95)
+        self.fig.subplots_adjust(hspace=0.45, top=0.95, bottom=0.15, left=0.08, right=0.82)
         self.fig.patch.set_facecolor('#1e1e1e')
         for ax in self.ax:
             ax.set_facecolor('#2d2d2d')
@@ -103,7 +103,7 @@ class Graphic():
         if len(self.mean_values) > 0:
             self.ax[-1].plot(self.mean_values,linewidth=2.0,color='white',
                              label=f'Mean = {round(self.mean_values[-1],2)} | dp = {round(self.std[-1],2)}', marker='', linestyle='-')
-        self.ax[-1].legend(fontsize=9, loc='lower left', frameon=True, facecolor='#2d2d2d', edgecolor='#444444', labelcolor='white')
+        self.ax[-1].legend(fontsize=9, bbox_to_anchor=(0.83, 0.95), bbox_transform=self.fig.transFigure, loc='upper left', frameon=True, facecolor='#2d2d2d', edgecolor='#444444', labelcolor='white')
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
     
