@@ -128,15 +128,20 @@ if conn is None:
 
 test_control = {s: DerivativeControl() for s in available_sensors}
 
+selected_sensors = []
 while True:
     def save_port_api():
         global ip_port
         ip_port = ip.get()
+        selected_sensors.clear()
+        for s, var in sensor_vars.items():
+            if var.get():
+                selected_sensors.append(s)
         window.quit()
         window.destroy()
 
     window = tk.Tk()
-    window.title("Configuração da API")
+    window.title("Configurações")
     window.configure(bg="#f0f0f0")
     
     style = ttk.Style()
@@ -144,9 +149,10 @@ while True:
     style.configure('TLabel', background="#f0f0f0", font=('Segoe UI', 10))
     style.configure('TButton', font=('Segoe UI', 10))
     style.configure('TEntry', font=('Segoe UI', 10))
+    style.configure('TCheckbutton', background="#f0f0f0", font=('Segoe UI', 9))
     
-    width = 320
-    height = 160
+    width = 450
+    height = 250 + (len(available_sensors) // 3) * 30
 
     width_screen = window.winfo_screenwidth()
     height_screen = window.winfo_screenheight()
@@ -163,11 +169,24 @@ while True:
     ip_label.grid(row=0, column=0, sticky="w", pady=(0, 5))
 
     ip = ttk.Entry(window, width=35)
-    ip.grid(row=1, column=0, pady=(0, 20), ipady=3)
+    ip.grid(row=1, column=0, pady=(0, 15), ipady=3)
     ip.focus()
+    
+    lbl_sensors = ttk.Label(window, text="Selecione os sensores para visualizar no gráfico:")
+    lbl_sensors.grid(row=2, column=0, sticky="w", pady=(0, 5))
+    
+    frame_sensors = tk.Frame(window, bg="#f0f0f0")
+    frame_sensors.grid(row=3, column=0, sticky="w", pady=(0, 15))
+    
+    sensor_vars = {}
+    for i, s in enumerate(available_sensors):
+        var = tk.BooleanVar(value=True)
+        chk = ttk.Checkbutton(frame_sensors, text=s, variable=var, style='TCheckbutton')
+        chk.grid(row=i//3, column=i%3, sticky="w", padx=5, pady=2)
+        sensor_vars[s] = var
 
     btn_ok = ttk.Button(window, text="Confirmar", width=15, command=save_port_api)
-    btn_ok.grid(row=2, column=0)
+    btn_ok.grid(row=4, column=0)
 
     window.mainloop()
     
@@ -194,7 +213,7 @@ while True:
         if not retry:
             break
 
-graphic = Graphic(ip_port, available_sensors)
+graphic = Graphic(ip_port, available_sensors, selected_sensors)
 anim = FuncAnimation(graphic.fig, run, cache_frame_data=False)
 plt.show()
 
