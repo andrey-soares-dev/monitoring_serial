@@ -29,10 +29,17 @@ class Graphic():
         self.sensors_values = {f'{i}' : [] for i in self.all_sensors}
         self.marker_point = np.ones(self.n_sensors)*-1
         self.colors = ['#00ff00', '#ff4444', '#00ccff', '#ffaa00', '#ff00ff']
-        self.avg_sensors = [s for s in self.plot_sensors if any(c.isdigit() for c in s)]
-        self.last_n_values = np.zeros(len(self.avg_sensors)) if self.avg_sensors else np.zeros(1)
-        self.mean_values = []
-        self.std = []
+        self.avg_sensors = [s for s in self.plot_sensors if any(c.isdigit() for c in s) and not s.lower().startswith('bme')]
+        self.sensor_types = {}
+        for s in self.avg_sensors:
+            stype = s.split('_')[0] if '_' in s else ''.join([c for c in s if not c.isdigit()])
+            if stype not in self.sensor_types:
+                self.sensor_types[stype] = []
+            self.sensor_types[stype].append(s)
+            
+        self.last_values = {stype: np.zeros(len(sensors)) for stype, sensors in self.sensor_types.items()}
+        self.mean_values = {stype: [] for stype in self.sensor_types}
+        self.std_values = {stype: [] for stype in self.sensor_types}
         self.reseted = False
         self.should_reset = False
         self.api_ip = api_ip
@@ -58,13 +65,17 @@ class Graphic():
             self.sensor_timestamp.append(datetime.now().strftime("%Y-%m-%dT%H:%M:%S"))
             
         if not_skip and sensor in self.avg_sensors:
-            idx = self.avg_sensors.index(sensor)
-            self.last_n_values[idx] = value
+            stype = sensor.split('_')[0] if '_' in sensor else ''.join([c for c in sensor if not c.isdigit()])
+            if stype in self.sensor_types:
+                idx = self.sensor_types[stype].index(sensor)
+                self.last_values[stype][idx] = value
             
         if self.avg_sensors and sensor == self.avg_sensors[-1]:
-            current_mean = np.mean(self.last_n_values)
-            self.mean_values.append(current_mean)
-            self.std.append(np.std(self.last_n_values, ddof=1) if len(self.last_n_values) > 1 else 0)
+            for stype in self.sensor_types:
+                current_mean = np.mean(self.last_values[stype])
+                self.mean_values[stype].append(current_mean)
+                std = np.std(self.last_values[stype], ddof=1) if len(self.last_values[stype]) > 1 else 0
+                self.std_values[stype].append(std)
 
     def update_graphic(self, mark_flags = [], update = False):
         if update:
@@ -100,9 +111,14 @@ class Graphic():
             if self.gas_injection:
                 ax.axvline(self.injection_index,linestyle='--',linewidth=1.0,color='#ffffff')
         
-        if len(self.mean_values) > 0:
-            self.ax[-1].plot(self.mean_values,linewidth=2.0,color='white',
-                             label=f'Mean = {round(self.mean_values[-1],2)} | dp = {round(self.std[-1],2)}', marker='', linestyle='-')
+        mean_colors = ['white', 'yellow', 'cyan', '#ffaa00', '#ff00ff']
+        for i, stype in enumerate(self.sensor_types):
+            if len(self.mean_values[stype]) > 0:
+                mean_val = round(self.mean_values[stype][-1], 2)
+                std_val = round(self.std_values[stype][-1], 2)
+                type_color = mean_colors[i % len(mean_colors)]
+                self.ax[-1].plot(self.mean_values[stype], linewidth=2.0, color=type_color,
+                                 label=f'{stype.upper()} Média = {mean_val} | DP = {std_val}', marker='', linestyle='-')
         self.ax[-1].legend(fontsize=9, bbox_to_anchor=(0.83, 0.95), bbox_transform=self.fig.transFigure, loc='upper left', frameon=True, facecolor='#2d2d2d', edgecolor='#444444', labelcolor='white')
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
@@ -130,9 +146,11 @@ class Graphic():
         self.sensor_timestamp = []
         self.sensors_values = {f'{i}' : [] for i in self.all_sensors}
         self.marker_point = np.ones(self.n_sensors)*-1
-        self.last_n_values = np.zeros(len(self.avg_sensors)) if self.avg_sensors else np.zeros(1)
-        self.mean_values = []
-        self.std = []
+        self.last_values = {stype: np.zeros(len(sensors)) for stype, sensors in self.sensor_types.items()}
+        self.mean_values = {stype: [] for stype in self.sensor_types}
+        self.std_values = {stype: [] for stype in self.sensor_types}
+        self.gas_injection = False
+        self.injection_index = 0
         self.reseted = True
         for s,ax in enumerate(self.ax):
             ax.clear()
